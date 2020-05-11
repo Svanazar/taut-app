@@ -26,7 +26,7 @@ app.use((err,req,res,next)=>{
 	if(!err.status){console.log(err)}
 })
 
-const PORT=process.env.port || 8000
+const PORT=process.env.port || 4000
 
 app.listen(PORT,()=>{
 	console.log(`Taut ga port ${PORT} de tsuketa`)

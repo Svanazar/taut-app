@@ -1,0 +1,11 @@
+body{
+	font-family:'Verdana';
+}
+
+.serverlist{
+	list-style: none;
+}
+
+.serverlist li{
+	border:1px solid black;
+}
