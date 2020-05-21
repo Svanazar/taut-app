@@ -2,10 +2,18 @@ body{
 	font-family:'Verdana';
 }
 
-.serverlist{
+.list{
 	list-style: none;
 }
 
 .serverlist li{
 	border:1px solid black;
+}
+
+.serverlist li.selected{
+	background-color:#00fff3;
+}
+
+.channellist li.selected{
+	background-color:#f3ff00;
 }
