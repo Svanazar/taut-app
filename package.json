@@ -4,12 +4,13 @@
   "description": "a slack clone for learning React",
   "main": "index.js",
   "scripts": {
-    "test": "nodemon node index.js",
+    "devstart": "node -r dotenv/config app.js",
     "start": "nodemon node app.js"
   },
   "author": "Svanazar",
   "license": "ISC",
   "devDependencies": {
+    "dotenv": "^8.2.0",
     "morgan": "^1.10.0"
   },
   "dependencies": {
