@@ -8,7 +8,6 @@ app.use(morgan('dev'))
 
 //setting up mongoDB connection through mongoose
 let mongoose =require('mongoose');
-// let mongoDB="mongodb+srv://vlad:jbmQSdt97dZLHym3@cluster0-rebjq.gcp.mongodb.net/taut?retryWrites=true&w=majority";
 mongoose.connect(process.env.mongo_url,{useNewUrlParser:true, useUnifiedTopology:true});
 let db=mongoose.connection;
 db.on('error',console.error.bind(console,'MongoDB connection error:'));
