@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "devstart": "node -r dotenv/config app.js",
+    "debstart":"node inspect -r dotenv/config app.js",
     "start": "nodemon node app.js"
   },
   "author": "Svanazar",

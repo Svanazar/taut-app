@@ -5,6 +5,7 @@ let serverRouter=require('./routes/server_router')
 let userRouter=require('./routes/user_router')
 
 app.use(morgan('dev'))
+app.use(express.json()) //parses application/json type request body
 
 //setting up mongoDB connection through mongoose
 let mongoose =require('mongoose');
