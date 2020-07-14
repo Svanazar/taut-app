@@ -2,65 +2,29 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import './layout.css'
 
-// class ChannelList extends React.Component{
-// 	constructor(props){
-// 		super(props)
-// 		this.state={
-// 			'selchannel':0
-// 		}
-// 	}
+class NameForm extends React.Component{
+	constructor(props){
+		super(props)
+		this.state={value:""}
+	}
 
-// 	render(){
-// 		//this.props.channels contains list of channels
-// 		const listItems=this.props.channels.map(channel=><li>{channel.name}</li>)	
-// 		listItems[this.state.selchannel]=<li className='selected'>{this.props.channels[this.state.selchannel].name}</li>
-// 		return(
-// 			<ul className="list channellist">{listItems}</ul>
-// 		)
-// 	}
-// }
+	handleChange=(event)=>{
+		this.setState({value:event.target.value})
+	}
 
+	handleSubmit=(event)=>{
+		event.preventDefault()
+		this.props.click_handler(this.state.value)
+	}
 
-// class ServerList extends React.Component{
-// 	constructor(props){
-// 		super(props)
-// 		this.state={
-// 			'selserver':0
-// 		}
-// 	}
-	
-// 	handleClick=(i)=>{
-// 		this.setState({
-// 			'selserver':i
-// 		})
-// 	}
-
-// 	render(){
-// 		//this render is being called before the componentDidMount of the parent is being completed
-// 		//which necessitates this if block. However, this problem wasn't present when Serverlist was handling the network request?
-// 		if(!this.props.servers){
-// 			return null
-// 		}
-// 		//normal code
-// 		// const listItems=this.props.servers.map(server=>{
-// 		// 	return <li key="server._id" onClick={this.handleClic}>{server.name}</li>
-// 		// })
-// 		// listItems[this.state.selserver]=<li className='selected'>{this.props.servers[this.state.selserver].name}</li>
-// 		const listItems=this.props.servers.map((server,index)=>{
-// 			if(this.state.selserver===index)
-// 				return <li key={server._id} className="selected" onClick={()=>this.handleClick(index)}>{server.name}</li>
-// 			else
-// 				return <li key={server._id} onClick={()=>this.handleClick(index)}>{server.name}</li>
-// 		})
-
-// 		return(
-// 			<div>
-// 				<ul className="list serverlist">{listItems}</ul>
-// 				<ChannelList channels={this.props.servers[this.state.selserver].channels} />
-// 			</div>
-// 		)
-// 	}
-// }
+	render(){
+		return(
+			<form onSubmit={this.handleSubmit}>
+				<input type="text" value={this.state.value} onChange={this.handleChange} />
+			</form>
+		);
+	}
+}
 
 function ServerList(props){
 	const listItems=props.servers.map((server)=>{
@@ -94,7 +58,8 @@ class SlackLayout extends React.Component{
 		this.state={
 			'servers':[],
 			'selserver':"",
-			'selchannel':""
+			'selchannel':"",
+			'addingchannel':false
 		}
 	}
 
@@ -112,6 +77,10 @@ class SlackLayout extends React.Component{
 		this.setState(state)
 	}
 
+	addChannelInput=()=>{
+		this.setState({addingchannel:true})
+	}
+
 	createChannel=async (name)=>{
 		try{
 			let selserver=this.state.selserver
@@ -127,13 +96,16 @@ class SlackLayout extends React.Component{
 				let servers=this.state.servers
 				await servers.find((server)=>server._id===selserver).channels.push(newchannel)
 				this.setState({
-					"servers":servers
+					"servers":servers,
 				})
 			}
 			else{console.log('Internal Error')}
 		}
 		catch(error){
 			console.error(error)
+		}
+		finally{
+			this.setState({addingchannel:false})
 		}
 	}
 
@@ -164,7 +136,7 @@ class SlackLayout extends React.Component{
 	}
 
 	render(){
-		let servlist,chanlist;
+		let servlist,chanlist
 		if(this.state.servers.length){
 			servlist=<ServerList servers={this.state.servers} selserver={this.state.selserver} click_handler={this.handleClick}/>
 			let channels=this.state.servers.find((server)=>server._id===this.state.selserver).channels
@@ -182,7 +154,10 @@ class SlackLayout extends React.Component{
 				{servlist}
 				<h1>Channels</h1>
 				{chanlist}
-				<button onClick={()=>{this.createChannel("jikken")}}>New Channel</button>
+				{this.state.addingchannel && (
+					<NameForm click_handler={this.createChannel} />
+				)}
+				<button disabled={this.state.addingchannel?true:false} onClick={this.addChannelInput}>New Channel</button>
 			</div>
 		)
 	}
