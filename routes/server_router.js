@@ -43,28 +43,6 @@ router.get('/:name', async (req,res,next)=>{
 	catch(error){next(error)}
 })
 
-
-// router.get('/:id/channels/new', async (req,res,next)=>{
-// 	try{
-// 		let getserver=Server.findById(req.params.id)
-// 		let server= await getserver
-// 		if(server){
-// 			let channel=server.channels.create({
-// 				'name':'testchannel'
-// 			})
-// 			server.channels.push(channel)
-// 			let updated= await server.save()
-// 			res.send({
-// 				"newchannel":channel,
-// 			})
-// 		}
-// 		else{
-// 			throw {'status':404, 'message':'No such server found'}
-// 		}
-// 	}
-// 	catch(error){next(error)}
-// })
-
 router.post('/:id/channels/new', async (req,res,next)=>{
 	try{
 		debugger;

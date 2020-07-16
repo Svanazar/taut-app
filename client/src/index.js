@@ -1,6 +1,37 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import socketIOClient from "socket.io-client"
 import './layout.css'
+
+function MessageList(props){
+	function sendMessage(text,cancel){
+		let message={
+			server:props.selserver,
+			channel:props.selchannel,
+			text:text,
+			posted:JSON.stringify(new Date())
+		}
+		props.socket.emit('chat-message',message)
+	}
+	let listItems=props.messages.map((message)=>{
+		return(
+			<li>
+				<p>{message.text}</p>
+				<small>Time:{message.posted}</small>
+			</li>
+		);
+	})
+	let list;
+	if(props.messages.length){list=<ul>{listItems}</ul>}
+	else{list=<p>Start a new conversation</p>}
+	return(
+		<div>
+			<h2>Messages</h2>
+			{list}
+			<NameForm click_handler={sendMessage}/>
+		</div>
+	);
+}
 
 class NameForm extends React.Component{
 	constructor(props){
@@ -14,13 +45,15 @@ class NameForm extends React.Component{
 
 	handleSubmit=(event)=>{
 		event.preventDefault()
-		this.props.click_handler(this.state.value)
+		this.setState({value:""})
+		this.props.click_handler(this.state.value,false)
 	}
 
 	render(){
 		return(
 			<form onSubmit={this.handleSubmit}>
 				<input type="text" value={this.state.value} onChange={this.handleChange} />
+				<input type="button" value="Cancel" onClick={()=>{this.props.click_handler("",true)}}/>
 			</form>
 		);
 	}
@@ -64,24 +97,30 @@ class SlackLayout extends React.Component{
 	}
 
 	handleClick=(id,type)=>{
-		let state={}
 		if(type==='s'){
-			state={
+			this.setState({
 				'selserver':id,
-				'selchannel':this.state.servers.find((server)=>server._id===id).channels[0]._id
-			}
+				'selchannel':this.state.servers.find((server)=>server._id===id).channels[0]._id,
+				'addingchannel':false
+			})
 		}
 		else if(type==='c'){
-			state['selchannel']=id;
+			this.setState({
+				selchannel:id,
+				addingchannel:false
+			})
 		}
-		this.setState(state)
 	}
 
 	addChannelInput=()=>{
 		this.setState({addingchannel:true})
 	}
 
-	createChannel=async (name)=>{
+	createChannel=async (name,cancel)=>{
+		if(cancel){
+			this.setState({addingchannel:false})
+			return;
+		}
 		try{
 			let selserver=this.state.selserver
 			let resp=await fetch(`/server/${selserver}/channels/new`,{
@@ -93,8 +132,9 @@ class SlackLayout extends React.Component{
 				let newchannel=await resp.json()
 				newchannel=newchannel.newchannel
 				console.log(newchannel)
-				let servers=this.state.servers
-				await servers.find((server)=>server._id===selserver).channels.push(newchannel)
+				//!Problem: change so that the update to state respects immutability of state.
+				let servers=this.state.servers //assigning by reference! it is not a copy
+				await servers.find((server)=>server._id===selserver).channels.push(newchannel) //directly modifies this.state
 				this.setState({
 					"servers":servers,
 				})
@@ -111,6 +151,17 @@ class SlackLayout extends React.Component{
 
 	async componentDidMount(){
 		try{
+			let socket=socketIOClient()
+			this.socket=socket;
+			socket.on('disconnect',(reason)=>{
+				console.log("disconnected")
+				console.log(reason)
+			})
+			// socket.on('chat-message',(message)=>{
+			// 	let server=this.state.servers.find((srv)=>srv._id===message.server)
+			// 	server.channels.find((channel)=>channel._id=message.channel).messages.push({text:message.text,posted:message.posted})
+			// 	this.setState()
+			// })
 			let resp=await fetch('/server/all')
 			if(resp.status){
 				let data = await resp.json()
@@ -135,31 +186,37 @@ class SlackLayout extends React.Component{
 		}
 	}
 
+	componentWillUnmount(){
+		this.socket.disconnect()
+	}
+
 	render(){
 		let servlist,chanlist
 		if(this.state.servers.length){
 			servlist=<ServerList servers={this.state.servers} selserver={this.state.selserver} click_handler={this.handleClick}/>
 			let channels=this.state.servers.find((server)=>server._id===this.state.selserver).channels
 			chanlist=<ChannelList channels={channels} selchannel={this.state.selchannel} click_handler={this.handleClick}/>
+			let messages=channels.find((channel)=>channel._id===this.state.selchannel).messages
+			return(
+				<div>
+					<h1>Servers</h1>
+					{servlist}
+					<h1>Channels</h1>
+					{chanlist}
+					{this.state.addingchannel && (
+						<NameForm click_handler={this.createChannel} />
+					)}
+					<button disabled={this.state.addingchannel?true:false} onClick={this.addChannelInput}>New Channel</button>
+					<MessageList selserver={this.state.selserver} selchannel={this.state.selchannel} socket={this.socket} messages={messages}/>
+				</div>
+			)
 		}
 		else if(this.state.error){
-			servlist=<p>{this.state.error}</p>
+				return(<p>{this.state.error}</p>);
 		}
 		else{
-			servlist=<p>Loading server list...</p>
+			return(<p>Loading server list...</p>);
 		}
-		return(
-			<div>
-				<h1>Servers</h1>
-				{servlist}
-				<h1>Channels</h1>
-				{chanlist}
-				{this.state.addingchannel && (
-					<NameForm click_handler={this.createChannel} />
-				)}
-				<button disabled={this.state.addingchannel?true:false} onClick={this.addChannelInput}>New Channel</button>
-			</div>
-		)
 	}
 }
 
