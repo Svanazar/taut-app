@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import socketIOClient from "socket.io-client"
 import './layout.css'
+import DataStore from './comp/store.js'
 
 function MessageList(props){
 	function sendMessage(text,cancel){
@@ -59,57 +60,58 @@ class NameForm extends React.Component{
 	}
 }
 
-function ServerList(props){
-	const listItems=props.servers.map((server)=>{
+function List(props){
+	const listItems=props.items.map((item)=>{
 		let selclass=""
-		if(server._id===props.selserver){
+		if(item._id===props.selid){
 			selclass="selected"
 		}
-		return <li key={server._id} className={selclass} onClick={()=>props.click_handler(server._id,'s')}>{server.name}</li>
+		return <li key={item._id} className={selclass} onClick={()=>props.click_handler(item._id,props.itemType)}>{item.name}</li>
 	})
 	return(
-		<ul className="list serverlist">{listItems}</ul>
-		)
-}
-
-function ChannelList(props){
-	const listItems=props.channels.map((channel)=>{
-		let selclass=""
-		if(channel._id===props.selchannel){
-			selclass="selected"
-		}
-		return <li key={channel._id} className={selclass} onClick={()=>props.click_handler(channel._id,'c')}>{channel.name}</li>
-	})
-	return(
-		<ul className="list channellist">{listItems}</ul>
-		)
+		<ul className={`list ${props.itemType}list`}>{listItems}</ul>
+	)
 }
 
 class SlackLayout extends React.Component{
 	constructor(props){
 		super(props)
 		this.state={
-			'servers':[],
 			'selserver':"",
 			'selchannel':"",
-			'addingchannel':false
+			'addingchannel':false,
+			'server_names':[],
+			'channel_names':[],
+			'messages':[]
 		}
 	}
 
 	handleClick=(id,type)=>{
-		if(type==='s'){
-			this.setState({
-				'selserver':id,
-				'selchannel':this.state.servers.find((server)=>server._id===id).channels[0]._id,
-				'addingchannel':false
-			})
-		}
-		else if(type==='c'){
-			this.setState({
-				selchannel:id,
-				addingchannel:false
-			})
-		}
+		this.setState((prev)=>{
+			let servers=DataStore.getServers()
+			let selserver=prev.selserver
+			let selchannel=prev.selchannel
+			if(type==='server'){
+				selserver=id
+				let curserver=servers.find((s)=>s._id===selserver)
+				selchannel=curserver.channels[0]._id
+				return({
+					selserver:selserver,
+					selchannel:selchannel,
+					channel_names:curserver.channels,
+					messages:curserver.channels[0].messages,
+					addingchannel:false
+				})
+			}
+			else if(type==='channel'){
+				selchannel=id
+				return({
+					selchannel:selchannel,
+					messages:servers.find((s)=>s._id===selserver).channels.find((c)=>c._id===selchannel).messages,
+					addingchannel:false
+				})
+			}
+		})
 	}
 
 	addChannelInput=()=>{
@@ -132,12 +134,7 @@ class SlackLayout extends React.Component{
 				let newchannel=await resp.json()
 				newchannel=newchannel.newchannel
 				console.log(newchannel)
-				//!Problem: change so that the update to state respects immutability of state.
-				let servers=this.state.servers //assigning by reference! it is not a copy
-				await servers.find((server)=>server._id===selserver).channels.push(newchannel) //directly modifies this.state
-				this.setState({
-					"servers":servers,
-				})
+				await DataStore.addChannel(this.state.selserver,newchannel)
 			}
 			else{console.log('Internal Error')}
 		}
@@ -157,19 +154,31 @@ class SlackLayout extends React.Component{
 				console.log("disconnected")
 				console.log(reason)
 			})
-			// socket.on('chat-message',(message)=>{
-			// 	let server=this.state.servers.find((srv)=>srv._id===message.server)
-			// 	server.channels.find((channel)=>channel._id=message.channel).messages.push({text:message.text,posted:message.posted})
-			// 	this.setState()
-			// })
-			let resp=await fetch('/server/all')
-			if(resp.status){
-				let data = await resp.json()
+			DataStore.subscribe('init',()=>{
+				let servers=DataStore.getServers()
+				let selserver=servers.find((server)=>server._id===this.state.selserver)
+				let selchannel=selserver.channels.find((channel)=>channel._id===this.state.selchannel)
 				this.setState({
-					'servers':data,
+					server_names:servers.map((server)=>({_id:server._id,name:server.name})),
+					channel_names:selserver.channels,
+					messages:selchannel.messages
+				})
+			})
+			DataStore.subscribe('channel_update',()=>{
+				this.setState((prev)=>{
+					return({
+						channel_names:DataStore.getServers().find((s)=>s._id===prev.selserver).channels
+					})
+				})
+			})
+			let resp=await fetch('/server/all')
+			if(resp.ok){
+				let data = await resp.json()
+				await this.setState({
 					'selserver':data[0]._id,
 					'selchannel':data[0].channels[0]._id
 				})
+				DataStore.initialize(data)
 			}
 			else{
 				this.setState({
@@ -188,21 +197,18 @@ class SlackLayout extends React.Component{
 
 	componentWillUnmount(){
 		this.socket.disconnect()
+		DataStore.unsubscribe('channel_update')
 	}
 
 	render(){
-		let servlist,chanlist
-		if(this.state.servers.length){
-			servlist=<ServerList servers={this.state.servers} selserver={this.state.selserver} click_handler={this.handleClick}/>
-			let channels=this.state.servers.find((server)=>server._id===this.state.selserver).channels
-			chanlist=<ChannelList channels={channels} selchannel={this.state.selchannel} click_handler={this.handleClick}/>
-			let messages=channels.find((channel)=>channel._id===this.state.selchannel).messages
+		if(this.state.server_names.length){
+			let messages=this.state.messages
 			return(
 				<div>
 					<h1>Servers</h1>
-					{servlist}
+					<List itemType="server" items={this.state.server_names} selid={this.state.selserver} click_handler={this.handleClick}/>
 					<h1>Channels</h1>
-					{chanlist}
+					<List itemType="channel" items={this.state.channel_names} selid={this.state.selchannel} click_handler={this.handleClick}/>
 					{this.state.addingchannel && (
 						<NameForm click_handler={this.createChannel} />
 					)}
