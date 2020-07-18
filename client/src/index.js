@@ -149,10 +149,15 @@ class SlackLayout extends React.Component{
 	async componentDidMount(){
 		try{
 			let socket=socketIOClient()
-			this.socket=socket;
+			this.socket=socket
 			socket.on('disconnect',(reason)=>{
 				console.log("disconnected")
 				console.log(reason)
+			})
+			socket.on('chat-message',(message)=>{
+				console.log("new message!")
+				console.log(message)
+				DataStore.addMessage(message)
 			})
 			DataStore.subscribe('init',()=>{
 				let servers=DataStore.getServers()
@@ -170,6 +175,12 @@ class SlackLayout extends React.Component{
 						channel_names:DataStore.getServers().find((s)=>s._id===prev.selserver).channels
 					})
 				})
+			})
+			DataStore.subscribe('message_update',()=>{
+				this.setState((prev)=>({
+					messages:DataStore.getServers().find((s)=>s._id===prev.selserver).channels.find((c)=>c._id===prev.selchannel).messages
+				})
+				)
 			})
 			let resp=await fetch('/server/all')
 			if(resp.ok){
@@ -198,6 +209,7 @@ class SlackLayout extends React.Component{
 	componentWillUnmount(){
 		this.socket.disconnect()
 		DataStore.unsubscribe('channel_update')
+		DataStore.unsubscribe('message_update')
 	}
 
 	render(){

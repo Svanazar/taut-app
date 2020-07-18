@@ -29,7 +29,17 @@ let DataStore={
 			await servers.find((server)=>server._id===server_id).channels.push(newchannel)
 			emitter.emit('channel_update')
 		}
-	}
+	},
+
+	addMessage:async (message)=>{
+		console.log("adding new message")
+		await servers.find((s)=>s._id===message.server)
+		.channels.find((c)=>c._id===message.channel).messages.push({
+			text:message.text,
+			posted:message.posted
+		})
+		emitter.emit('message_update')
+	},
 }
 
 export default DataStore
