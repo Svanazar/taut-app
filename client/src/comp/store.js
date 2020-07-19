@@ -26,7 +26,10 @@ let DataStore={
 
 	addChannel:async (server_id,newchannel)=>{
 		if(servers.length){
-			await servers.find((server)=>server._id===server_id).channels.push(newchannel)
+			let server=servers.find((s)=>s._id===server_id)
+				if(!server.channels.find((c)=>c._id===newchannel._id)){
+					server.channels.push(newchannel)
+				}
 			emitter.emit('channel_update')
 		}
 	},

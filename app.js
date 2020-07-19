@@ -9,7 +9,7 @@ app.use(express.json()) //parses application/json type request body
 
 //socketio setup
 const server=require('http').createServer(app) //socket io takes the base http server, not the Express app one
-const io=require('socket.io')(server) //passing to the created server the socket instance
+const io=require('./socket').createSocket(server)
 
 //setting up mongoDB connection through mongoose
 let mongoose =require('mongoose');
@@ -36,7 +36,6 @@ io.on('connection',(socket)=>{
 		console.log('setsuzoku owatta')
 	})
 	socket.on('chat-message',(message)=>{
-		console.log(message)
 		io.emit('chat-message',message)
 	})
 })

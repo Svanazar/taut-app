@@ -131,10 +131,8 @@ class SlackLayout extends React.Component{
 				body:JSON.stringify({name:name})
 			})
 			if(resp.ok){
-				let newchannel=await resp.json()
-				newchannel=newchannel.newchannel
-				console.log(newchannel)
-				await DataStore.addChannel(this.state.selserver,newchannel)
+				let {server_id,newchannel}=await resp.json()
+				await DataStore.addChannel(server_id,newchannel)
 			}
 			else{console.log('Internal Error')}
 		}
@@ -158,6 +156,9 @@ class SlackLayout extends React.Component{
 				console.log("new message!")
 				console.log(message)
 				DataStore.addMessage(message)
+			})
+			socket.on('new-channel',({server_id,newchannel})=>{
+				DataStore.addChannel(server_id,newchannel)
 			})
 			DataStore.subscribe('init',()=>{
 				let servers=DataStore.getServers()

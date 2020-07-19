@@ -1,7 +1,7 @@
 let express=require('express')
 let mongoose=require('mongoose')
 let router=express.Router()
-
+let {getio}=require('../socket')
 let Server=require('../models/server')
 
 router.get('/all', async (req,res,next)=>{
@@ -45,7 +45,6 @@ router.get('/:name', async (req,res,next)=>{
 
 router.post('/:id/channels/new', async (req,res,next)=>{
 	try{
-		debugger;
 		let getserver=Server.findById(req.params.id)
 		let server= await getserver
 		if(server){
@@ -54,9 +53,12 @@ router.post('/:id/channels/new', async (req,res,next)=>{
 			})
 			server.channels.push(channel)
 			let updated= await server.save()
-			res.send({
-				"newchannel":channel,
-			})
+			let data={
+				server_id:server._id,
+				newchannel:channel
+			}
+			res.send(data)
+			getio().emit('new-channel',data)
 		}
 		else{
 			throw {'status':404, 'message':'No such server found'}
