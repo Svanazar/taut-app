@@ -34,14 +34,20 @@ let DataStore={
 		}
 	},
 
-	addMessage:async (message)=>{
+	addMessage:(message)=>{
 		console.log("adding new message")
-		await servers.find((s)=>s._id===message.server)
-		.channels.find((c)=>c._id===message.channel).messages.push({
-			text:message.text,
-			posted:message.posted
-		})
-		emitter.emit('message_update')
+		console.log(message)
+		let channel=servers.find((s)=>s._id===message.server)
+		.channels.find((c)=>c._id===message.channel)
+		channel.messages.push(message.message)
+		if(message.unread){
+			channel['unread_from']=message.message._id
+			console.log(channel)
+			emitter.emit('channel_update')
+		}
+		else{
+			emitter.emit('message_update')
+		}
 	},
 }
 

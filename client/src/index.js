@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import socketIOClient from "socket.io-client"
+import io from "socket.io-client"
 import './layout.css'
 import DataStore from './comp/store.js'
 
@@ -10,7 +10,7 @@ function MessageList(props){
 			server:props.selserver,
 			channel:props.selchannel,
 			text:text,
-			posted:JSON.stringify(new Date())
+			posted:(new Date()).toISOString()
 		}
 		props.socket.emit('chat-message',message)
 	}
@@ -64,7 +64,10 @@ function List(props){
 	const listItems=props.items.map((item)=>{
 		let selclass=""
 		if(item._id===props.selid){
-			selclass="selected"
+			selclass+="selected"
+		}
+		if(props.itemType==='channel' && item.unread_from){
+			selclass+=" unread"
 		}
 		return <li key={item._id} className={selclass} onClick={()=>props.click_handler(item._id,props.itemType)}>{item.name}</li>
 	})
@@ -146,16 +149,31 @@ class SlackLayout extends React.Component{
 
 	async componentDidMount(){
 		try{
-			let socket=socketIOClient()
+			const socket=io()
 			this.socket=socket
 			socket.on('disconnect',(reason)=>{
 				console.log("disconnected")
 				console.log(reason)
 			})
-			socket.on('chat-message',(message)=>{
+			socket.on('chat-message',async (message)=>{
 				console.log("new message!")
-				console.log(message)
-				DataStore.addMessage(message)
+				message['unread']=false
+				if(message.channel!==this.state.selchannel){
+					let data={
+						socketId:socket.id,
+						server:message.server,
+						channel:message.channel,
+						id:message._id
+					}
+					await socket.emit('mark-unread',data,(resp)=>{
+						if(resp.status){
+							console.log('an unread message!')
+							message['unread']=true
+							DataStore.addMessage(message)
+						}
+					})
+				}
+				else{DataStore.addMessage(message)}
 			})
 			socket.on('new-channel',({server_id,newchannel})=>{
 				DataStore.addChannel(server_id,newchannel)

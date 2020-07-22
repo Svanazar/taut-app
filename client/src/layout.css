@@ -17,3 +17,7 @@ body{
 .channellist li.selected{
 	background-color:#f3ff00;
 }
+
+.channellist li.unread{
+	background-color:#ff0000;
+}

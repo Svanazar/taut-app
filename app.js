@@ -8,7 +8,7 @@ app.use(morgan('dev'))
 app.use(express.json()) //parses application/json type request body
 
 //socketio setup
-const server=require('http').createServer(app) //socket io takes the base http server, not the Express app one
+const server=require('http').createServer(app)
 const io=require('./socket').createSocket(server)
 
 //setting up mongoDB connection through mongoose
@@ -29,17 +29,6 @@ app.use((err,req,res,next)=>{
 	res.send(err.status?err:"Internal Server Error, check server log")
 	if(!err.status){console.log(err)}
 })
-
-io.on('connection',(socket)=>{
-	console.log("Dareka ga setsuzoku shita")
-	socket.on('disconnect',()=>{
-		console.log('setsuzoku owatta')
-	})
-	socket.on('chat-message',(message)=>{
-		io.emit('chat-message',message)
-	})
-})
-
 
 const PORT=process.env.PORT || 4000
 
