@@ -49,6 +49,14 @@ let DataStore={
 			emitter.emit('message_update')
 		}
 	},
+
+	markRead:(data)=>{
+		let channel=servers.find((s)=>s._id===data.server).channels.find((s)=>s._id===data.channel)
+		if(channel.unread_from === data.messageId){
+			channel.unread_from=undefined
+			emitter.emit('channel_update')
+		}
+	}
 }
 
 export default DataStore

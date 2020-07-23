@@ -35,6 +35,10 @@ module.exports={
 				console.log(`marking unread for socket ${data.socketId}`)
 				fn({status:'ok'})
 			})
+			socket.on('mark-message-status',async (data,cb)=>{
+				console.log("marking as read")
+				cb({status:'ok'})
+			})
 		})
 		return io
 	},

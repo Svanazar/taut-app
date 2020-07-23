@@ -91,12 +91,11 @@ class SlackLayout extends React.Component{
 
 	handleClick=(id,type)=>{
 		this.setState((prev)=>{
-			let servers=DataStore.getServers()
 			let selserver=prev.selserver
 			let selchannel=prev.selchannel
 			if(type==='server'){
 				selserver=id
-				let curserver=servers.find((s)=>s._id===selserver)
+				let curserver=DataStore.getServers().find((s)=>s._id===selserver)
 				selchannel=curserver.channels[0]._id
 				return({
 					selserver:selserver,
@@ -108,9 +107,23 @@ class SlackLayout extends React.Component{
 			}
 			else if(type==='channel'){
 				selchannel=id
+				let channel=DataStore.getServers().find((s)=>s._id===selserver).channels.find((c)=>c._id===selchannel)
+				if(channel.unread_from){
+					let data={
+						server:selserver,
+						channel:selchannel,
+						messageId:channel.unread_from,
+						unread:false
+					}
+					this.socket.emit('mark-message-status',data,(resp)=>{
+						if(resp.status){
+							DataStore.markRead(data)
+						}
+					})
+				}
 				return({
 					selchannel:selchannel,
-					messages:servers.find((s)=>s._id===selserver).channels.find((c)=>c._id===selchannel).messages,
+					messages:DataStore.getServers().find((s)=>s._id===selserver).channels.find((c)=>c._id===selchannel).messages,
 					addingchannel:false
 				})
 			}
